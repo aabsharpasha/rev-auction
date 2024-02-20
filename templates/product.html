@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse Auction Demo</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .winner {
+          background-color: lightgreen;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1>Reverse Auction Demo</h1>
+    <div class="row">
+
+        <div class="col-md-6 border" style="font-size:20px;">
+
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Supplier Id</th>
+                    <th scope="col">Bid Amount</th>
+                </tr>
+                </thead>
+                <tbody id="bid-list">
+                </tbody>
+            </table>
+
+            <button type="button" class="btn btn-primary" id="create-auction">Create Auction</button>
+        </div>
+
+        <div class="col-md-6 border" style="font-size: 20px;">
+            <h2 id="product-name"><b>{{ product_name }}</b></h2>
+            <p></p>
+            <p id="starting-price">Starting Price: {{ starting_price }}</p>
+            <p>Current Bid: <span id="current-bid">{{ current_bid }}</span></p>
+            <p>Time Remaining: <span id="timer">{{ auction_end_time }}</span> seconds</p>
+            <form id="bid-form">
+                <div class="form-group">
+                    <label for="bid-amount">Enter Your Bid:</label>
+                    <input class="form-control" type="number" id="bid-amount" placeholder="Enter your bid">
+                </div>
+                <button type="submit" class="btn btn-primary">Place Bid</button>
+            </form>
+            <p id="winner-msg" class="mt-10 text-success" style="font-size:25px;"></p>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyA4ycxeN0ieijrjMoY09xal8UD-zmuIQ1M",
+      authDomain: "fir-project-74df9.firebaseapp.com",
+      projectId: "fir-project-74df9",
+      storageBucket: "fir-project-74df9.appspot.com",
+      messagingSenderId: "404278961658",
+      appId: "1:404278961658:web:f001f62854899a13e93043"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    const database = getDatabase(app);
+
+    const dataDiv = document.getElementById("winner-msg");
+
+
+
+
+    var auction_id = 1;
+    $("#bid-form").submit(function(event) {
+      event.preventDefault();
+      const bidAmount = $("#bid-amount").val();
+      const data = {
+          bidder: 'Supplier-'+bidAmount,
+          bid_amount: bidAmount
+      };
+
+      placeBid(1, 'Supplier-'+bidAmount, bidAmount);
+
+    });
+
+
+ function createAuction(description, endsAt) {
+  const newAuctionRef = ref(database, `auctions/${auction_id}`);
+  set(newAuctionRef, {
+    currentPrice: 60000,
+    description,
+    endsAt,
+    winner: null,
+    bids: {}
+  });
+}
+
+function placeBid(auctionId, userId, amount) {
+
+  const bidsRef = ref(database, `auctions/${auctionId}/bids`);
+  const newBidRef = push(bidsRef);
+  set(newBidRef, {
+    userId,
+    amount,
+  });
+  updateCurrentPrice(auctionId, amount);
+}
+
+function updateCurrentPrice(auctionId, newPrice) {
+  set(ref(database, `auctions/${auctionId}/currentPrice`), newPrice);
+  document.getElementById('current-bid').innerHTML = newPrice;
+}
+
+function determineWinner(auctionId) {
+  const bidsRef = ref(database, `auctions/${auctionId}/bids`);
+  onValue(bidsRef, (snapshot) => {
+    const bids = snapshot.val();
+    if (bids) {
+      const highestBid = Object.values(bids).reduce((maxBid, currentBid) => {
+        return maxBid.amount > currentBid.amount ? maxBid : currentBid;
+      }, null);
+      if (highestBid) {
+        set(ref(database, `auctions/${auctionId}/winner`), highestBid.userId);
+      }
+    }
+  });
+}
+
+function updateTimerDisplay(auctionId, timerElement) {
+  onValue(ref(database, `auctions/${auction_id}/endsAt`), (snapshot) => {
+    const endsAt = snapshot.val();
+    const remainingTime = calculateRemainingTime(endsAt);
+    //const formattedTime = formatTime(remainingTime); // Implement formatting function
+    timerElement.innerHTML = remainingTime / 1000;
+  });
+}
+
+/*function handleAuctionEnd(auction_id) {
+  $("#bid-form").hide();
+  const winner = 'abc';
+  const bid_amt = '5000';
+  dataDiv.innerHTML = "Auction Ended!<br />Winner: "+winner+", Winning Bid: "+bid_amt;
+  alert('Auction Ended');
+}*/
+
+function calculateRemainingTime(endsAt) {
+  const now = Date.now();
+  const difference = endsAt - now;
+  return Math.max(difference, 0); // Ensure non-negative time
+}
+const after_minutes = 1;
+const currentTimestamp = Date.now();
+const oneMinuteInMilliseconds = 60 * after_minutes * 1000;
+const futureTimestamp = currentTimestamp + oneMinuteInMilliseconds;
+
+
+//createAuction('Apple iphone 11', futureTimestamp);
+onValue(ref(database, "auctions"), (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+    //console.log(data);
+        displayBids(data);
+        //dataDiv.innerHTML = JSON.stringify(data, null, 2);
+        document.getElementById('current-bid').innerHTML = data[1].currentPrice;
+
+    }
+});
+
+function displayBids(data) {
+    const tableBody = document.getElementById("bid-list");
+    tableBody.innerHTML = "";
+    const bids = data[auction_id].bids;
+    //console.log(bids);
+    for (const bidId in bids) {
+      const bid = bids[bidId];
+      const tableRow = document.createElement("tr");
+      const serial = document.createElement("td");
+      const userIdCell = document.createElement("td");
+      userIdCell.textContent = bid.userId;
+      const amountCell = document.createElement("td");
+      amountCell.textContent = bid.amount;
+
+      tableRow.appendChild(serial);
+      tableRow.appendChild(userIdCell);
+      tableRow.appendChild(amountCell);
+      tableBody.appendChild(tableRow);
+    }
+    }
+  const createAuctionButton = document.getElementById('create-auction');
+
+  createAuctionButton.addEventListener("click", () => {
+  const description = 'Apple iphone 14';
+  const endsAt = futureTimestamp;
+
+  if (!description || !endsAt) {
+    alert("Please fill in both description and end date.");
+    return;
+  }
+
+
+createAuction(description, endsAt);
+});
+const timerElement = document.getElementById("timer");
+updateTimerDisplay(auction_id, timerElement);
+const timer = setInterval(updateTimer, 1000);
+
+function updateTimer() {
+    onValue(ref(database, `auctions/${auction_id}/endsAt`), (snapshot) => {
+        const endsAt = snapshot.val();
+        const remainingTime = calculateRemainingTime(endsAt);
+
+        if (remainingTime > 0) {
+            timerElement.innerHTML = formatTime(remainingTime);
+        } else {
+            clearInterval(timer);
+            handleAuctionEnd(auction_id);
+        }
+    });
+}
+
+function formatTime(timestamp) {
+  const totalSeconds = Math.floor(timestamp / 1000); // Convert milliseconds to seconds
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  // Pad minutes and seconds with leading zeros for consistent formatting
+  const formattedMinutes = minutes.toString().padStart(2, "0");
+  const formattedSeconds = seconds.toString().padStart(2, "0");
+
+  return `${formattedMinutes} min(s) : ${formattedSeconds}`;
+}
+
+function handleAuctionEnd(auctionId) {
+//  const ref = database.ref(`auctions/${auctionId}`);
+
+  onValue(ref(database, `auctions/${auction_id}`), async (snapshot) => {
+    const data = snapshot.val();
+    if (!data || data.endsAt > Date.now()) {
+      return; // Auction not ended yet
+    }
+
+    const bids = data.bids || {};
+    let lowestBidAmount = 0;
+    let winner = null;
+
+    for (const bidId in bids) {
+      const bid = bids[bidId];
+      console.log(bid.amount+"--"+lowestBidAmount);
+      if (lowestBidAmount == 0 || parseInt(bid.amount) < parseInt(lowestBidAmount)) {
+        lowestBidAmount = bid.amount;
+        winner = bid.userId;
+        console.log(lowestBidAmount);
+      }
+    }
+
+    if (lowestBidAmount !== null) {
+      //console.log(`Auction ${auctionId} ended. Winner: ${winner} with bid amount: ${lowestBidAmount}`);
+  $("#bid-form").hide();
+  dataDiv.innerHTML = "Auction Ended!<br />Winner: "+winner+" with bid amount: "+lowestBidAmount;
+      set(ref(database, `auctions/${auction_id}/winner`), winner);
+    } else {
+      console.log(`Auction ${auctionId} ended with no bids.`);
+    }
+  });
+}
+
+if (window.location.href.indexOf('admin') == -1) {
+    $("#create-auction").hide();
+}
+</script>
+</body>
+</html>
