@@ -5,10 +5,8 @@ import time
 import threading  # Import the threading module
 import pusher
 
-
-
-
 app = Flask(__name__)
+app.secret_key = "A@bshar@1991#"
 socketio = SocketIO(app)
 pusher_client = pusher.Pusher(
     app_id='1755467',
@@ -42,8 +40,6 @@ def submit_bid():
     if bid_amount < current_bid:
         current_bid = bid_amount
         winner = "Seller" + str(current_bid)
-        #pusher_client.trigger("auction-channel", "new-bid", {"bid": current_bid})
-        #pusher_client.trigger("auction-channel", "initial_data", {"current_bid": current_bid, "auction_end_time": auction_end_time, "winner": winner})
         return jsonify({"message": "Bid received", "bid": current_bid})
     else:
         return jsonify({"message": "Bid should be lower than current bid"}), 400
@@ -57,4 +53,4 @@ def handle_connect():
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    app.run(debug=True)
