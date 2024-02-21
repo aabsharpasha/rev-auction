@@ -41,7 +41,7 @@
             <form id="name-grp">
                 <div class="form-group" >
                         <label for="bid-name">Please Enter Your Name to start bidding!</label>
-                        <input class="form-control" type="text" id="bid-name" placeholder="Enter your name">
+                        <input class="form-control" type="text" id="bid-name" placeholder="Enter your name" required>
 
                 </div>
                 <button id="name-submit" type="submit" class="btn btn-primary">Submit</button>
@@ -108,8 +108,6 @@
     winner: null,
     bids: {}
   });
-
-  //window.location.reload();
 }
 
 function placeBid(auctionId, userId, amount) {
@@ -160,10 +158,8 @@ function calculateRemainingTime(endsAt) {
   const difference = endsAt - now;
   return Math.max(difference, 0); // Ensure non-negative time
 }
-const after_minutes = 1;
-const currentTimestamp = Date.now();
-const oneMinuteInMilliseconds = 60 * after_minutes * 1000;
-const futureTimestamp = currentTimestamp + oneMinuteInMilliseconds;
+const after_minutes = 2;
+
 
 
 //createAuction('Apple iphone 11', futureTimestamp);
@@ -201,6 +197,10 @@ function displayBids(data) {
   const createAuctionButton = document.getElementById('create-auction');
 
   createAuctionButton.addEventListener("click", () => {
+  const currentTimestamp = Date.now();
+const oneMinuteInMilliseconds = 60 * after_minutes * 1000;
+const futureTimestamp = currentTimestamp + oneMinuteInMilliseconds;
+
   const description = 'Apple iphone 14';
   const endsAt = futureTimestamp;
 
@@ -224,7 +224,7 @@ function updateTimer() {
             timerElement.innerHTML = formatTime(remainingTime);
         } else {
             timerElement.innerHTML = formatTime(remainingTime);
-            clearInterval(timer);
+            //clearInterval(timer);
             handleAuctionEnd(auction_id);
         }
     });
@@ -278,6 +278,7 @@ if (winnerMsgElement) {
     } else {
         dataDiv.innerHTML = 'Auction ended with no bids.';
         $("#bid-form").hide();
+        $("#name-grp").hide();
         const winnerMsgElement = document.getElementById("winner-msg");
 
 if (winnerMsgElement) {
