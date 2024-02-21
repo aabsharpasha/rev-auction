@@ -12,17 +12,15 @@
     </style>
 </head>
 <body>
-
-<div class="container mt-5">
-    <h1>Reverse Auction Demo</h1>
+<div style="font-size:35px;text-align:center;font-weight:bold;">Reverse Auction Demo <button type="button" class="btn btn-primary" id="create-auction">Create Auction</button></div>
+<div class="container mt-2">
     <div class="row">
-
-        <div class="col-md-6 border" style="font-size:20px;">
+        <div class="col-md-6" style="font-size:20px;">
 
             <table class="table table-striped table-bordered table-sm">
                 <thead>
                 <tr>
-                    <th scope="col">Supplier Id</th>
+                    <th scope="col">Bidder Name</th>
                     <th scope="col">Bid Amount</th>
                 </tr>
                 </thead>
@@ -30,23 +28,34 @@
                 </tbody>
             </table>
 
-            <button type="button" class="btn btn-primary" id="create-auction">Create Auction</button>
+
         </div>
 
-        <div class="col-md-6 border" style="font-size: 20px;">
+        <div class="col-md-6 border" style="font-size: 20px;margin-bottom:300px;">
             <h2 id="product-name"><b>{{ product_name }}</b></h2>
             <p></p>
-            <p id="starting-price">Starting Price: {{ starting_price }}</p>
-            <p>Current Bid: <span id="current-bid">{{ current_bid }}</span></p>
-            <p>Time Remaining: <span id="timer">{{ auction_end_time }}</span> seconds</p>
+            <div id="starting-price">Starting Price: {{ starting_price }}</div>
+            <div>Current Bid: <span id="current-bid">{{ current_bid }}</span></div>
+            <div>Time Remaining: <span style="color:red;"><b><span id="timer">{{ auction_end_time }}</span> sec(s)</b></span></div>
+            <p></p>
+            <form id="name-grp">
+                <div class="form-group" >
+                        <label for="bid-name">Please Enter Your Name to start bidding!</label>
+                        <input class="form-control" type="text" id="bid-name" placeholder="Enter your name">
+
+                </div>
+                <button id="name-submit" type="submit" class="btn btn-primary">Submit</button>
+            </form>
+
             <form id="bid-form">
+
                 <div class="form-group">
                     <label for="bid-amount">Enter Your Bid:</label>
                     <input class="form-control" type="number" id="bid-amount" placeholder="Enter your bid">
                 </div>
                 <button type="submit" class="btn btn-primary">Place Bid</button>
             </form>
-            <p id="winner-msg" class="mt-10 text-success" style="font-size:25px;"></p>
+            <p id="winner-msg" class="mt-10 text-success" style="font-size:18px;"></p>
         </div>
 
     </div>
@@ -84,12 +93,8 @@
     $("#bid-form").submit(function(event) {
       event.preventDefault();
       const bidAmount = $("#bid-amount").val();
-      const data = {
-          bidder: 'Supplier-'+bidAmount,
-          bid_amount: bidAmount
-      };
 
-      placeBid(1, 'Supplier-'+bidAmount, bidAmount);
+      placeBid(1, localStorage.getItem("name-user"), bidAmount);
 
     });
 
@@ -103,6 +108,8 @@
     winner: null,
     bids: {}
   });
+
+  //window.location.reload();
 }
 
 function placeBid(auctionId, userId, amount) {
@@ -114,6 +121,7 @@ function placeBid(auctionId, userId, amount) {
     amount,
   });
   updateCurrentPrice(auctionId, amount);
+  $("#bid-amount").val('');
 }
 
 function updateCurrentPrice(auctionId, newPrice) {
@@ -145,20 +153,14 @@ function updateTimerDisplay(auctionId, timerElement) {
   });
 }
 
-/*function handleAuctionEnd(auction_id) {
-  $("#bid-form").hide();
-  const winner = 'abc';
-  const bid_amt = '5000';
-  dataDiv.innerHTML = "Auction Ended!<br />Winner: "+winner+", Winning Bid: "+bid_amt;
-  alert('Auction Ended');
-}*/
+
 
 function calculateRemainingTime(endsAt) {
   const now = Date.now();
   const difference = endsAt - now;
   return Math.max(difference, 0); // Ensure non-negative time
 }
-const after_minutes = 2;
+const after_minutes = 1;
 const currentTimestamp = Date.now();
 const oneMinuteInMilliseconds = 60 * after_minutes * 1000;
 const futureTimestamp = currentTimestamp + oneMinuteInMilliseconds;
@@ -218,10 +220,10 @@ function updateTimer() {
     onValue(ref(database, `auctions/${auction_id}/endsAt`), (snapshot) => {
         const endsAt = snapshot.val();
         const remainingTime = calculateRemainingTime(endsAt);
-
         if (remainingTime > 0) {
             timerElement.innerHTML = formatTime(remainingTime);
         } else {
+            timerElement.innerHTML = formatTime(remainingTime);
             clearInterval(timer);
             handleAuctionEnd(auction_id);
         }
@@ -241,6 +243,7 @@ function formatTime(timestamp) {
 }
 
 function handleAuctionEnd(auctionId) {
+//return true;
 //  const ref = database.ref(`auctions/${auctionId}`);
 
   onValue(ref(database, `auctions/${auction_id}`), async (snapshot) => {
@@ -255,27 +258,70 @@ function handleAuctionEnd(auctionId) {
 
     for (const bidId in bids) {
       const bid = bids[bidId];
-      console.log(bid.amount+"--"+lowestBidAmount);
       if (lowestBidAmount == 0 || parseInt(bid.amount) < parseInt(lowestBidAmount)) {
         lowestBidAmount = bid.amount;
         winner = bid.userId;
-        console.log(lowestBidAmount);
       }
     }
 
-    if (lowestBidAmount !== null) {
-      //console.log(`Auction ${auctionId} ended. Winner: ${winner} with bid amount: ${lowestBidAmount}`);
-  $("#bid-form").hide();
-  dataDiv.innerHTML = "Auction Ended!<br />Winner: "+winner+" with bid amount: "+lowestBidAmount;
-      set(ref(database, `auctions/${auction_id}/winner`), winner);
+    if (lowestBidAmount !== null && lowestBidAmount !== 0) {
+        $("#bid-form").hide();
+        dataDiv.innerHTML = "Auction Ended!<br />Winner: <b>"+winner+"</b> with bid amount: <b>"+lowestBidAmount+'</b>';
+        set(ref(database, `auctions/${auction_id}/winner`), winner);
+        const winnerMsgElement = document.getElementById("winner-msg");
+
+if (winnerMsgElement) {
+  winnerMsgElement.scrollIntoView({ behavior: "smooth" });
+} else {
+  console.error("Element with ID 'winner-msg' not found.");
+}
     } else {
-      console.log(`Auction ${auctionId} ended with no bids.`);
+        dataDiv.innerHTML = 'Auction ended with no bids.';
+        $("#bid-form").hide();
+        const winnerMsgElement = document.getElementById("winner-msg");
+
+if (winnerMsgElement) {
+  winnerMsgElement.scrollIntoView({ behavior: "smooth" });
+} else {
+  console.error("Element with ID 'winner-msg' not found.");
+}
     }
   });
 }
 
+const name_elm = document.getElementById('name-submit');
+
+
+ $("#name-grp").submit(function(event) {
+event.preventDefault();
+const bid_name = document.getElementById('bid-name');
+  if (bid_name.value.length) {
+    localStorage.setItem("name-user", bid_name.value);
+    const retrievedValue = localStorage.getItem("name-user");
+    $("#name-grp").html('<b>Welcome! '+retrievedValue+'</b>');
+    $("#bid-form").show();
+    //$("#name-grp").hide();
+    $("#bid-amount").focus();
+  } else {
+    alert('Please enter your name');
+  }
+  return false;
+});
+
+
 if (window.location.href.indexOf('admin') == -1) {
     $("#create-auction").hide();
+
+}
+
+if (localStorage.getItem("name-user") !== null) {
+    const retrievedValue = localStorage.getItem("name-user");
+    $("#name-grp").html('<b>Welcome! '+retrievedValue+'</b>');
+    $("#bid-amount").focus();
+
+} else {
+$("#bid-name").focus();
+    $("#bid-form").hide();
 }
 </script>
 </body>
