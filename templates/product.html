@@ -158,7 +158,7 @@ function calculateRemainingTime(endsAt) {
   const difference = endsAt - now;
   return Math.max(difference, 0); // Ensure non-negative time
 }
-const after_minutes = 1;
+const after_minutes = 2;
 const currentTimestamp = Date.now();
 const oneMinuteInMilliseconds = 60 * after_minutes * 1000;
 const futureTimestamp = currentTimestamp + oneMinuteInMilliseconds;
