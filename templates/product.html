@@ -101,7 +101,10 @@
     $("#bid-form").submit(function(event) {
       event.preventDefault();
       const bidAmount = $("#bid-amount").val();
-
+      if (bidAmount >= starting_price) {
+        alert('Bid Amount must be lower than Starting Price: '+starting_price);
+        return false;
+      }
       placeBid(1, localStorage.getItem("name-user"), bidAmount);
 
     });
@@ -167,7 +170,7 @@ function calculateRemainingTime(endsAt) {
   return Math.max(difference, 0); // Ensure non-negative time
 }
 const after_minutes = 2;
-
+const starting_price = 60000;
 
 
 //createAuction('Apple iphone 11', futureTimestamp);
