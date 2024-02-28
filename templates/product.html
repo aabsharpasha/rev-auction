@@ -16,12 +16,17 @@
 
 <div style="font-size:35px;text-align:center;font-weight:bold;">
     <div class="logo_main">
-                                <a target="_blank" href="https://www.gadgets360.com/">
-                    <img src="https://cdn.gadgets360.com/gadgets360_logo.png" alt="Technology News" title="Gadgets 360" width="240" height="75">
-                </a>
-            </div>
-    Reverse Auction Demo <button type="button" class="btn btn-primary" id="create-auction">Create Auction</button></div>
+        <a target="_blank" href="https://www.gadgets360.com/">
+            <img src="https://cdn.gadgets360.com/gadgets360_logo.png" alt="Technology News" title="Gadgets 360"
+                 width="240" height="75">
+        </a>
+    </div>
+    Reverse Auction Demo
+    <button type="button" class="btn btn-primary" id="create-auction">Create Auction</button>
+</div>
+
 <div class="container mt-2">
+    <div style="color:green;font-size:20px;">Total Bidder(s): <span id="total-user">0</span></div>
     <div class="row">
         <div class="col-md-6" style="font-size:20px;">
 
@@ -44,12 +49,13 @@
             <p></p>
             <div id="starting-price">Starting Price: {{ starting_price }}</div>
             <div>Current Bid: <span id="current-bid">{{ current_bid }}</span></div>
-            <div>Time Remaining: <span style="color:red;"><b><span id="timer">{{ auction_end_time }}</span> sec(s)</b></span></div>
+            <div>Time Remaining: <span style="color:red;"><b><span
+                    id="timer">{{ auction_end_time }}</span> sec(s)</b></span></div>
             <p></p>
             <form id="name-grp">
-                <div class="form-group" >
-                        <label for="bid-name">Please Enter Your Name to start bidding!</label>
-                        <input class="form-control" type="text" id="bid-name" placeholder="Enter your name" required>
+                <div class="form-group">
+                    <label for="bid-name"><b>Please Enter Your Name!</b></label>
+                    <input class="form-control" type="text" id="bid-name" placeholder="Enter your name" required>
 
                 </div>
                 <button id="name-submit" type="submit" class="btn btn-primary">Submit</button>
@@ -78,8 +84,21 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 <script type="module">
+    let lowestBidAmount = 0;
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    const firebaseConfig = {
+
+    var dev = 1;
+    if (dev) {
+      var firebaseConfig = {
+    apiKey: "AIzaSyBn9cl1kBmYc4YL-f-xgiK54nF2Y7h8dzw",
+    authDomain: "g360-demo.firebaseapp.com",
+    projectId: "g360-demo",
+    storageBucket: "g360-demo.appspot.com",
+    messagingSenderId: "567694397490",
+    appId: "1:567694397490:web:6abe79c09d6d550730ac2b"
+  };
+    } else {
+        var firebaseConfig = {
       apiKey: "AIzaSyA4ycxeN0ieijrjMoY09xal8UD-zmuIQ1M",
       authDomain: "fir-project-74df9.firebaseapp.com",
       projectId: "fir-project-74df9",
@@ -87,6 +106,7 @@
       messagingSenderId: "404278961658",
       appId: "1:404278961658:web:f001f62854899a13e93043"
     };
+    }
 
     const app = initializeApp(firebaseConfig);
     import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -95,17 +115,26 @@
     const dataDiv = document.getElementById("winner-msg");
 
 
-
-
     var auction_id = 1;
     $("#bid-form").submit(function(event) {
       event.preventDefault();
       const bidAmount = $("#bid-amount").val();
-      if (bidAmount >= starting_price) {
-        alert('Bid Amount must be lower than Starting Price: '+starting_price);
+      if (bidAmount > 0) {
+          if (bidAmount >= starting_price) {
+            alert('Bid Amount must be lower than Starting Price: '+starting_price);
+            return false;
+          }
+
+          /*if (bidAmount >= current_price) {
+            alert('Bid Amount must be lower than lowest bid: '+starting_price);
+            return false;
+          }*/
+
+          placeBid(1, localStorage.getItem("name-user"), bidAmount);
+      } else {
+        alert('Bid Amount must be greater that 0');
         return false;
       }
-      placeBid(1, localStorage.getItem("name-user"), bidAmount);
 
     });
 
@@ -125,9 +154,11 @@ function placeBid(auctionId, userId, amount) {
 
   const bidsRef = ref(database, `auctions/${auctionId}/bids`);
   const newBidRef = push(bidsRef);
+  const added_at = Date.now();
   set(newBidRef, {
     userId,
     amount,
+    added_at,
   });
   updateCurrentPrice(auctionId, amount);
   $("#bid-amount").val('');
@@ -135,6 +166,8 @@ function placeBid(auctionId, userId, amount) {
 
 function updateCurrentPrice(auctionId, newPrice) {
   set(ref(database, `auctions/${auctionId}/currentPrice`), newPrice);
+  var name = localStorage.getItem("name-user");
+  set(ref(database, `auctions/${auctionId}/presence/${name}`), Date.now());
   document.getElementById('current-bid').innerHTML = newPrice;
 }
 
@@ -184,6 +217,21 @@ onValue(ref(database, "auctions"), (snapshot) => {
 
     }
 });
+
+onValue(ref(database, `auctions/${auction_id}/presence`), (snapshot) => {
+if (snapshot.val()) {
+var data = Object.keys(snapshot.val()).length;
+    if (data) {
+        var len = Object.keys(snapshot.val()).length;
+        //displayBids(data);
+        const dataDiv = document.getElementById('total-user');
+        dataDiv.innerHTML = len;
+        //document.getElementById('current-bid').innerHTML = data[1].currentPrice;
+    }
+    }
+});
+
+
 
 function displayBids(data) {
     const tableBody = document.getElementById("bid-list");
@@ -252,10 +300,8 @@ function formatTime(timestamp) {
 
   return `${formattedMinutes} min(s) : ${formattedSeconds}`;
 }
-
+var flag = 1;
 function handleAuctionEnd(auctionId) {
-//return true;
-//  const ref = database.ref(`auctions/${auctionId}`);
 
   onValue(ref(database, `auctions/${auction_id}`), async (snapshot) => {
     const data = snapshot.val();
@@ -282,7 +328,10 @@ function handleAuctionEnd(auctionId) {
         const winnerMsgElement = document.getElementById("winner-msg");
 
 if (winnerMsgElement) {
+  if (flag) {
+  flag = 0;
   winnerMsgElement.scrollIntoView({ behavior: "smooth" });
+  }
 } else {
   console.error("Element with ID 'winner-msg' not found.");
 }
@@ -307,7 +356,8 @@ const name_elm = document.getElementById('name-submit');
  $("#name-grp").submit(function(event) {
 event.preventDefault();
 const bid_name = document.getElementById('bid-name');
-  if (bid_name.value.length) {
+//console.log(isNaN(bid_name.value));
+  if (bid_name.value.length && isNaN(parseInt(bid_name.value))) {
     localStorage.setItem("name-user", bid_name.value);
     const retrievedValue = localStorage.getItem("name-user");
     $("#name-grp").html('<b>Welcome! '+retrievedValue+'</b>');
