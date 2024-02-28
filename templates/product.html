@@ -87,7 +87,7 @@
     let lowestBidAmount = 0;
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
-    var dev = 1;
+    var dev = window.location.href.indexOf('.com') !== -1 ? 0 : 1;
     if (dev) {
       var firebaseConfig = {
     apiKey: "AIzaSyBn9cl1kBmYc4YL-f-xgiK54nF2Y7h8dzw",
